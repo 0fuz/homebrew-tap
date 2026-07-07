@@ -23,9 +23,10 @@ cask "ssh-tunnel-manager" do
   ]
 
   caveats <<~EOS
-    SSH Tunnel Manager is not notarized. If macOS blocks the first launch,
-    right-click the app in /Applications and choose Open, or reinstall with:
+    SSH Tunnel Manager is not notarized. On first launch, right-click it in
+    /Applications and choose Open. To skip that prompt, clear the quarantine
+    flag once:
 
-      brew install --cask --no-quarantine ssh-tunnel-manager
+      xattr -dr com.apple.quarantine /Applications/SSHTunnelManager.app
   EOS
 end
