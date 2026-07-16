@@ -1,6 +1,6 @@
-name: Update cask
+name: Update casks
 
-# Keeps Casks/ssh-tunnel-manager.rb in sync with the latest app release.
+# Keeps every cask in Casks/ in sync with its app's latest release.
 # Runs daily, and can be run on demand from the Actions tab right after a
 # release. Pushes to this repo with the built-in GITHUB_TOKEN, so no extra
 # secret or PAT is needed.
@@ -19,34 +19,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Sync cask to the latest release
+      - name: Sync casks to the latest releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          REPO="0fuz/ssh-tunnel-manager"
-          CASK="Casks/ssh-tunnel-manager.rb"
-
-          TAG=$(gh api "repos/$REPO/releases/latest" --jq .tag_name)
-          VERSION="${TAG#v}"
-          CURRENT=$(grep -E '^[[:space:]]*version[[:space:]]+"' "$CASK" | sed -E 's/.*"([^"]+)".*/\1/')
-
-          echo "latest release: $VERSION | cask has: $CURRENT"
-          if [ "$VERSION" = "$CURRENT" ]; then
-            echo "Already up to date."
-            exit 0
-          fi
-
-          URL="https://github.com/$REPO/releases/download/$TAG/SSHTunnelManager.dmg"
-          curl -fsSL "$URL" -o app.dmg
-          SHA=$(sha256sum app.dmg | awk '{print $1}')
-          rm -f app.dmg
-
-          sed -i -E "s|^([[:space:]]*version[[:space:]]+\").*(\")|\1${VERSION}\2|" "$CASK"
-          sed -i -E "s|^([[:space:]]*sha256[[:space:]]+\").*(\")|\1${SHA}\2|" "$CASK"
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$CASK"
-          git commit -m "Update ssh-tunnel-manager to ${VERSION}"
-          git push
+
+          # repo | cask file | release asset
+          APPS="
+          0fuz/ssh-tunnel-manager|Casks/ssh-tunnel-manager.rb|SSHTunnelManager.dmg
+          0fuz/hangar|Casks/hangar.rb|Hangar.dmg
+          "
+
+          CHANGED=0
+          for LINE in $APPS; do
+            REPO="${LINE%%|*}"; REST="${LINE#*|}"
+            CASK="${REST%%|*}"; ASSET="${REST#*|}"
+
+            TAG=$(gh api "repos/$REPO/releases/latest" --jq .tag_name)
+            VERSION="${TAG#v}"
+            CURRENT=$(grep -E '^[[:space:]]*version[[:space:]]+"' "$CASK" | sed -E 's/.*"([^"]+)".*/\1/')
+
+            echo "$REPO: latest release $VERSION | cask has $CURRENT"
+            if [ "$VERSION" = "$CURRENT" ]; then
+              continue
+            fi
+
+            URL="https://github.com/$REPO/releases/download/$TAG/$ASSET"
+            curl -fsSL "$URL" -o app.dmg
+            SHA=$(sha256sum app.dmg | awk '{print $1}')
+            rm -f app.dmg
+
+            sed -i -E "s|^([[:space:]]*version[[:space:]]+\").*(\")|\1${VERSION}\2|" "$CASK"
+            sed -i -E "s|^([[:space:]]*sha256[[:space:]]+\").*(\")|\1${SHA}\2|" "$CASK"
+
+            git add "$CASK"
+            git commit -m "Update $(basename "$CASK" .rb) to ${VERSION}"
+            CHANGED=1
+          done
+
+          if [ "$CHANGED" = "1" ]; then
+            git push
+          else
+            echo "All casks up to date."
+          fi
