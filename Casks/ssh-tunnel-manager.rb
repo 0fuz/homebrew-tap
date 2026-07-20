@@ -1,6 +1,6 @@
 cask "ssh-tunnel-manager" do
-  version "1.8.0"
-  sha256 "f1006305186385a5b77d63410194c733a0915a4beb3e0a75426b16e854ee83b1"
+  version "1.9.0"
+  sha256 "a8e4f9c785f7e8be1dd93ec546885eb1351ae774ad16bb947a44bb05e3102a31"
 
   url "https://github.com/0fuz/ssh-tunnel-manager/releases/download/v#{version}/SSHTunnelManager.dmg"
   name "SSH Tunnel Manager"
